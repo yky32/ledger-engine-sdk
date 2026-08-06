@@ -9,7 +9,23 @@ Java client SDK for **[ledger-engine](https://github.com/yky32/ledger-engine)**.
 | **`1.1.0`** | Phase B DX: resource API, streaming file, batch partial results |
 | `1.0.0` | Production baseline (auth, retries, typed errors) |
 
-## Maven
+## Delivery model
+
+**Manual only** — no Maven Central / Nexus publish.  
+After contract: build versioned JAR → **email to client** (see [`docs/DELIVERY.md`](docs/DELIVERY.md)).
+
+| Artifact | Send? | Notes |
+|----------|-------|--------|
+| `ledger-engine-sdk-1.1.0.jar` | **Yes** | Thin library (~76 KB) for their backend |
+| `ledger-engine-sdk-1.1.0-cli.jar` | Optional | File ingest CLI (~20 MB) |
+| `SHA256SUMS.txt` | **Yes** | Integrity after email |
+
+```bash
+mvn clean package
+# email: target/ledger-engine-sdk-1.1.0.jar (+ checksum)
+```
+
+### Client dependency (after they install the jar)
 
 ```xml
 <dependency>
@@ -18,16 +34,14 @@ Java client SDK for **[ledger-engine](https://github.com/yky32/ledger-engine)**.
   <version>1.1.0</version>
 </dependency>
 
-<!-- Only if you use Kafka channel -->
-<dependency>
-  <groupId>org.apache.kafka</groupId>
-  <artifactId>kafka-clients</artifactId>
-  <version>3.8.1</version>
-</dependency>
+<!-- Always: Jackson (if not already on their classpath) -->
+<!-- Only if Kafka channel: kafka-clients 3.8.1 -->
 ```
 
+Internal/dev:
+
 ```bash
-mvn clean install
+mvn clean install   # local ~/.m2 only — not a client publish path
 ```
 
 ### Compatibility
