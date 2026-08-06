@@ -24,7 +24,7 @@ import java.time.Instant;
  * &lt;dependency&gt;
  *   &lt;groupId&gt;com.altech&lt;/groupId&gt;
  *   &lt;artifactId&gt;ledger-engine-sdk&lt;/artifactId&gt;
- *   &lt;version&gt;0.2.0-SNAPSHOT&lt;/version&gt;
+ *   &lt;version&gt;1.0.0&lt;/version&gt;
  * &lt;/dependency&gt;
  * // Optional Kafka:
  * &lt;dependency&gt;

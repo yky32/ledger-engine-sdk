@@ -6,7 +6,7 @@
 
     <groupId>com.altech</groupId>
     <artifactId>ledger-engine-sdk</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>ledger-engine-sdk</name>
     <description>
         Client SDK for Ledger Engine: shared agreement objects, REST, Kafka, and file-based ingestion.

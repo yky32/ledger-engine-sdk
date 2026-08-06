@@ -1,30 +1,50 @@
 # Changelog
 
-## 0.2.0-SNAPSHOT — Phase A (UAfinance production harden)
+SemVer from **1.0.0**. Pre-1.0 snapshots (`0.1.0-SNAPSHOT`, `0.2.0-SNAPSHOT`) are historical only and are not published as product versions.
 
-### Added
-- Typed exceptions: `LedgerValidationException`, `LedgerNotFoundException`, `LedgerConflictException`,
-  `LedgerAuthException`, `LedgerRateLimitException`, `LedgerServerException`, `LedgerNetworkException`
-- Engine `ApiError` parsing (`code`, `message`, `path`, `fieldErrors`) via `ErrorMapper`
-- REST auth: `bearerToken`, `apiKey` / `apiKeyHeader`, `defaultHeader`
-- `Idempotency-Key` and `X-Request-Id` on mutating REST calls
-- Retry with full jitter on 429 / 5xx / network (`RetryPolicy`)
-- `defaultExternalType` (UAfinance: `uafinance`) and `LedgerClient.forUafinance(baseUrl)`
-- Separate connect vs request timeouts
-- `PublishResult` for Kafka acks (facade no longer returns raw `RecordMetadata`)
-- Docs: `docs/ERRORS.md`, `examples/uafinance/UafinanceQuickstart.java`
+## [1.0.0] — 2026-08-06
 
-### Changed
-- Version bump `0.1.0-SNAPSHOT` → `0.2.0-SNAPSHOT`
-- `kafka-clients` is **optional** (REST-only consumers do not pull Kafka transitively)
-- Main artifact is a **thin** library JAR; shaded CLI is `…-cli.jar` (classifier `cli`)
-- Model validation throws `LedgerValidationException`
-- `@JsonIgnoreProperties(ignoreUnknown = true)` on agreement objects
-- `amount(double)` on `TransactionalEvent.Builder` deprecated
+First production baseline for **UAfinance** (first product client).
 
-### Migration from 0.1
-1. Update dependency version to `0.2.0-SNAPSHOT`
-2. If using Kafka, explicitly add `org.apache.kafka:kafka-clients`
-3. CLI: use `ledger-engine-sdk-*-cli.jar` (not the plain jar)
-4. Catch typed exceptions instead of only `LedgerException` where useful
-5. `ingestKafka` now returns `PublishResult` instead of `RecordMetadata`
+### Included (consolidated from 0.1 / Phase A)
+
+**Contracts & channels**
+- Agreement objects: `TransactionalEvent`, wallet onboard DTOs
+- Channels: REST, Kafka (optional dep), file (NDJSON / JSON array)
+- Facade: `LedgerClient`, `LedgerClient.forUafinance(baseUrl)`
+- CLI: shaded JAR classifier `cli` (`FileIngestCli`)
+
+**Production harden (Phase A)**
+- Typed exceptions + engine `ApiError` mapping
+- REST auth (`bearerToken`, `apiKey`), `Idempotency-Key`, `X-Request-Id`
+- Retry with full jitter (`RetryPolicy`)
+- Thin library JAR; `kafka-clients` optional
+- `defaultExternalType` / `defaultCurrency` (UAfinance: `uafinance` / `LP`)
+- Docs: `docs/ERRORS.md`, `examples/uafinance/`
+
+### Compatibility
+
+| Component | Version |
+|-----------|---------|
+| ledger-engine-sdk | **1.0.0** |
+| ledger-engine (recommended min) | **1.0.0** |
+| Java | 17+ |
+
+### Maven
+
+```xml
+<dependency>
+  <groupId>com.altech</groupId>
+  <artifactId>ledger-engine-sdk</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+---
+
+## Historical (not product versions)
+
+| Tag / version | Notes |
+|---------------|--------|
+| `0.1.0-SNAPSHOT` | Initial scaffold (REST / Kafka / file) |
+| `0.2.0-SNAPSHOT` | Phase A harden (folded into 1.0.0) |

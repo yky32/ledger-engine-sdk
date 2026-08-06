@@ -12,7 +12,7 @@ import java.util.List;
  * Runnable CLI entrypoint for optional file-based ingestion.
  * Packaged as {@code ledger-engine-sdk-*-cli.jar} (shaded).
  * <pre>
- * java -jar ledger-engine-sdk-0.2.0-SNAPSHOT-cli.jar \
+ * java -jar ledger-engine-sdk-1.0.0-cli.jar \
  *   --base-url http://localhost:8080 \
  *   --file ./events.ndjson \
  *   --delivery REST

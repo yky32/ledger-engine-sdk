@@ -14,7 +14,7 @@ No separate `*-api` module — contracts + transports live in this single SDK.
 
 | Version | Status |
 |---------|--------|
-| `0.2.0-SNAPSHOT` | Phase A: typed errors, auth, retries, idempotency, optional Kafka, thin JAR |
+| **`1.0.0`** | Production baseline (UAfinance). SemVer starts here. |
 
 ## Maven
 
@@ -22,7 +22,7 @@ No separate `*-api` module — contracts + transports live in this single SDK.
 <dependency>
   <groupId>com.altech</groupId>
   <artifactId>ledger-engine-sdk</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 </dependency>
 
 <!-- Only if you use Kafka channel -->
@@ -36,6 +36,12 @@ No separate `*-api` module — contracts + transports live in this single SDK.
 ```bash
 mvn clean install
 ```
+
+### Compatibility
+
+| SDK | ledger-engine (min) | Notes |
+|-----|---------------------|--------|
+| 1.0.x | 1.0.0 | UAfinance baseline |
 
 ## UAfinance quick start
 
@@ -89,7 +95,7 @@ Error handling: [`docs/ERRORS.md`](docs/ERRORS.md)
 | **Kafka** | `client.ingestKafka(event)` | Needs `kafka-clients` + bootstrap; returns `PublishResult` |
 | **File** | `client.ingestFileRest(path)` | NDJSON or JSON array |
 
-## Auth & reliability (Phase A)
+## Auth & reliability
 
 ```java
 LedgerClientConfig.builder()
@@ -114,7 +120,7 @@ Thin library JAR is the main artifact. Shaded CLI:
 
 ```bash
 mvn clean package
-java -jar target/ledger-engine-sdk-0.2.0-SNAPSHOT-cli.jar \
+java -jar target/ledger-engine-sdk-1.0.0-cli.jar \
   --base-url http://localhost:8080 \
   --file ./events.ndjson \
   --delivery REST \
@@ -153,12 +159,18 @@ com.altech.ledger.sdk
 └── cli/FileIngestCli         # classifier cli JAR
 ```
 
+## Versioning
+
+- **SemVer from 1.0.0** — `MAJOR.MINOR.PATCH`
+- Breaking API / wire contract → major
+- New channels / non-breaking APIs → minor
+- Fixes → patch
+- Pre-1.0 SNAPSHOTs (`0.1`, `0.2`) are obsolete; do not depend on them
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## Requirements
 
 - Java 17+
-- ledger-engine reachable (HTTP and/or Kafka enabled)
+- ledger-engine **1.0.0+** reachable (HTTP and/or Kafka enabled)
 - Optional: `kafka-clients` for MQ channel
-
-## License / status
-
-`0.2.0-SNAPSHOT` — see [CHANGELOG.md](CHANGELOG.md). Align deploy with your ledger-engine version.
