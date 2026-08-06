@@ -1,44 +1,55 @@
 # Changelog
 
-SemVer from **1.0.0**. Pre-1.0 snapshots (`0.1.0-SNAPSHOT`, `0.2.0-SNAPSHOT`) are historical only and are not published as product versions.
+SemVer from **1.0.0**. Pre-1.0 snapshots are historical only.
 
-## [1.0.0] — 2026-08-06
+## [1.1.0] — 2026-08-06
 
-First production baseline for **UAfinance** (first product client).
+Phase B — developer experience for UAfinance (resource API, streaming files, batch partial results).
 
-### Included (consolidated from 0.1 / Phase A)
+### Added
+- Resource API: `client.wallets()`, `client.events()`, `client.files()`
+- `DeliveryChannel` enum (`REST`, `KAFKA`)
+- Batch package: `BatchOptions`, `BatchResult`, `ItemResult`, `ItemOutcome`, `ProgressListener`
+- `continueOnError` + progress callbacks for event/file/wallet-each batches
+- Streaming NDJSON and JSON-array ingest (no full-file `readString`)
+- Async helpers: `wallets().onboardAsync`, `events().submitAsync`, `wallets().getAsync`
+- CLI: `--continue-on-error`, `--progress-every N`
 
-**Contracts & channels**
-- Agreement objects: `TransactionalEvent`, wallet onboard DTOs
-- Channels: REST, Kafka (optional dep), file (NDJSON / JSON array)
-- Facade: `LedgerClient`, `LedgerClient.forUafinance(baseUrl)`
-- CLI: shaded JAR classifier `cli` (`FileIngestCli`)
-
-**Production harden (Phase A)**
-- Typed exceptions + engine `ApiError` mapping
-- REST auth (`bearerToken`, `apiKey`), `Idempotency-Key`, `X-Request-Id`
-- Retry with full jitter (`RetryPolicy`)
-- Thin library JAR; `kafka-clients` optional
-- `defaultExternalType` / `defaultCurrency` (UAfinance: `uafinance` / `LP`)
-- Docs: `docs/ERRORS.md`, `examples/uafinance/`
+### Changed
+- `FileLedgerClient` parse path streams large files; `processBatch` delegates to `FileApi`
+- Convenience `ingestFileRest` / `ingestFileKafka` use streaming `files().process`
 
 ### Compatibility
-
-| Component | Version |
-|-----------|---------|
-| ledger-engine-sdk | **1.0.0** |
-| ledger-engine (recommended min) | **1.0.0** |
-| Java | 17+ |
-
-### Maven
+- **1.0.x APIs remain**: `onboardWallet`, `ingestRest`, `rest()`, etc.
+- Requires ledger-engine **1.0.0+** (unchanged wire contract)
 
 ```xml
 <dependency>
   <groupId>com.altech</groupId>
   <artifactId>ledger-engine-sdk</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
+
+---
+
+## [1.0.0] — 2026-08-06
+
+First production baseline for **UAfinance**.
+
+### Included
+- Agreement objects, REST / Kafka / file channels
+- Typed exceptions, auth, retries, idempotency (Phase A)
+- Thin library JAR; `kafka-clients` optional; CLI classifier `cli`
+- `LedgerClient.forUafinance`, docs under `docs/ERRORS.md`
+
+### Compatibility
+
+| Component | Version |
+|-----------|---------|
+| ledger-engine-sdk | 1.0.0 |
+| ledger-engine (recommended min) | 1.0.0 |
+| Java | 17+ |
 
 ---
 
@@ -46,5 +57,5 @@ First production baseline for **UAfinance** (first product client).
 
 | Tag / version | Notes |
 |---------------|--------|
-| `0.1.0-SNAPSHOT` | Initial scaffold (REST / Kafka / file) |
+| `0.1.0-SNAPSHOT` | Initial scaffold |
 | `0.2.0-SNAPSHOT` | Phase A harden (folded into 1.0.0) |

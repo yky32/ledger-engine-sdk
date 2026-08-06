@@ -1,21 +1,24 @@
 package com.altech.ledger.sdk.cli;
 
+import com.altech.ledger.sdk.DeliveryChannel;
 import com.altech.ledger.sdk.LedgerClient;
 import com.altech.ledger.sdk.LedgerClientConfig;
-import com.altech.ledger.sdk.file.FileLedgerClient;
+import com.altech.ledger.sdk.batch.BatchOptions;
+import com.altech.ledger.sdk.batch.BatchResult;
+import com.altech.ledger.sdk.batch.ProgressListener;
 import com.altech.ledger.sdk.model.IngestionResult;
 
 import java.nio.file.Path;
-import java.util.List;
 
 /**
  * Runnable CLI entrypoint for optional file-based ingestion.
  * Packaged as {@code ledger-engine-sdk-*-cli.jar} (shaded).
  * <pre>
- * java -jar ledger-engine-sdk-1.0.0-cli.jar \
+ * java -jar ledger-engine-sdk-1.1.0-cli.jar \
  *   --base-url http://localhost:8080 \
  *   --file ./events.ndjson \
- *   --delivery REST
+ *   --delivery REST \
+ *   --continue-on-error
  * </pre>
  */
 public final class FileIngestCli {
@@ -30,6 +33,8 @@ public final class FileIngestCli {
         String kafkaBootstrap = envOr("KAFKA_BOOTSTRAP", null);
         String kafkaTopic = envOr("KAFKA_TOPIC", "ledger.transaction.events");
         String externalType = envOr("LEDGER_EXTERNAL_TYPE", "uafinance");
+        boolean continueOnError = false;
+        int progressEvery = 100;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -41,6 +46,8 @@ public final class FileIngestCli {
                 case "--token" -> bearer = args[++i];
                 case "--api-key" -> apiKey = args[++i];
                 case "--external-type" -> externalType = args[++i];
+                case "--continue-on-error" -> continueOnError = true;
+                case "--progress-every" -> progressEvery = Integer.parseInt(args[++i]);
                 case "--help", "-h" -> {
                     printHelp();
                     return;
@@ -67,22 +74,21 @@ public final class FileIngestCli {
             cfg.kafkaBootstrapServers(kafkaBootstrap).kafkaTopic(kafkaTopic);
         }
 
-        FileLedgerClient.Delivery mode = FileLedgerClient.Delivery.valueOf(delivery.toUpperCase());
+        DeliveryChannel channel = DeliveryChannel.valueOf(delivery.toUpperCase());
+        BatchOptions options = BatchOptions.builder()
+            .continueOnError(continueOnError)
+            .progress(ProgressListener.loggingEvery(progressEvery))
+            .build();
+
         try (LedgerClient client = LedgerClient.create(cfg.build())) {
-            List<IngestionResult> results = client.file().process(Path.of(file), mode);
-            if (mode == FileLedgerClient.Delivery.KAFKA) {
-                System.out.println("Published events from " + file + " to Kafka (async).");
-            } else {
-                int applied = 0, skipped = 0, other = 0;
-                for (IngestionResult r : results) {
-                    System.out.println(r);
-                    if (r.isApplied()) applied++;
-                    else if (r.getStatus() == IngestionResult.Status.SKIPPED
-                        || r.getStatus() == IngestionResult.Status.DUPLICATE) skipped++;
-                    else other++;
-                }
-                System.out.printf("Done. total=%d applied=%d skipped=%d other=%d%n",
-                    results.size(), applied, skipped, other);
+            BatchResult<IngestionResult> batch = client.files().process(Path.of(file), channel, options);
+            System.out.printf("Done. %s%n", batch);
+            if (batch.hasFailures() && !continueOnError) {
+                System.exit(1);
+            }
+            if (batch.hasFailures()) {
+                System.err.printf("Failures: %d (see progress log)%n", batch.failureCount());
+                System.exit(1);
             }
         }
     }
@@ -103,6 +109,8 @@ public final class FileIngestCli {
               --base-url URL           Ledger base URL (default http://localhost:8080)
               --file PATH              JSON array or NDJSON of TransactionalEvent
               --delivery REST|KAFKA    Default REST
+              --continue-on-error      Collect per-item failures (do not stop)
+              --progress-every N       Log progress every N items (default 100)
               --token TOKEN            Bearer token (or LEDGER_TOKEN)
               --api-key KEY            API key header (or LEDGER_API_KEY)
               --external-type TYPE     Default uafinance

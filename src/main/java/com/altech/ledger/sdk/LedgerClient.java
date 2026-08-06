@@ -1,5 +1,10 @@
 package com.altech.ledger.sdk;
 
+import com.altech.ledger.sdk.api.EventApi;
+import com.altech.ledger.sdk.api.FileApi;
+import com.altech.ledger.sdk.api.WalletApi;
+import com.altech.ledger.sdk.batch.BatchOptions;
+import com.altech.ledger.sdk.batch.BatchResult;
 import com.altech.ledger.sdk.file.FileLedgerClient;
 import com.altech.ledger.sdk.kafka.KafkaLedgerClient;
 import com.altech.ledger.sdk.kafka.PublishResult;
@@ -9,26 +14,37 @@ import com.altech.ledger.sdk.rest.RestLedgerClient;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Facade for product clients (first client: UAfinance).
  * <p>
- * Channels:
- * <ol>
- *   <li>{@link #rest()} — HTTP to ledger-engine</li>
- *   <li>{@link #kafka()} — MQ publish of {@link TransactionalEvent}</li>
- *   <li>{@link #file()} — batch file ingest (optional)</li>
- * </ol>
+ * Preferred resource API (Phase B):
+ * <pre>
+ * client.wallets().onboard(...);
+ * client.events().submit(event);
+ * client.files().process(path, DeliveryChannel.REST, BatchOptions.continueOnError());
+ * </pre>
+ * Channels still available via {@link #rest()}, {@link #kafka()}, {@link #file()}.
  */
 public final class LedgerClient implements AutoCloseable {
     private final LedgerClientConfig config;
     private final RestLedgerClient rest;
+    private final Executor asyncExecutor;
+    private final WalletApi wallets;
+    private final EventApi events;
+    private final FileApi files;
     private KafkaLedgerClient kafka;
     private FileLedgerClient file;
 
     private LedgerClient(LedgerClientConfig config) {
         this.config = Objects.requireNonNull(config, "config");
         this.rest = new RestLedgerClient(config);
+        this.asyncExecutor = ForkJoinPool.commonPool();
+        this.wallets = new WalletApi(rest, asyncExecutor);
+        this.events = new EventApi(rest, this::kafka, asyncExecutor);
+        this.files = new FileApi(rest, this::kafka);
     }
 
     public static LedgerClient create(LedgerClientConfig config) {
@@ -54,6 +70,25 @@ public final class LedgerClient implements AutoCloseable {
         return config;
     }
 
+    // ---- Phase B resource API ----
+
+    /** Phase 1 — wallet onboarding & lookup. */
+    public WalletApi wallets() {
+        return wallets;
+    }
+
+    /** Phase 2 — transactional events (REST / Kafka). */
+    public EventApi events() {
+        return events;
+    }
+
+    /** Phase 3 — streaming file ingest. */
+    public FileApi files() {
+        return files;
+    }
+
+    // ---- low-level channels ----
+
     public RestLedgerClient rest() {
         return rest;
     }
@@ -70,7 +105,7 @@ public final class LedgerClient implements AutoCloseable {
     }
 
     /**
-     * File channel uses REST by default; Kafka delivery available when Kafka is configured.
+     * Legacy file channel (list-based). Prefer {@link #files()} for streaming + batch options.
      */
     public synchronized FileLedgerClient file() {
         if (file == null) {
@@ -79,40 +114,45 @@ public final class LedgerClient implements AutoCloseable {
         return file;
     }
 
-    // ---- convenience: Phase 1 wallets ----
+    // ---- convenience (1.0-compatible) ----
 
     public WalletOnboardResponse onboardWallet(OnboardWalletRequest request) {
-        return rest.onboardWallet(request);
+        return wallets.onboard(request);
     }
 
     public BatchOnboardWalletResponse onboardWalletsBatch(List<OnboardWalletRequest> wallets) {
-        return rest.onboardWalletsBatch(wallets);
+        return this.wallets.onboardBatch(wallets);
     }
 
     public WalletOnboardResponse getWallet(String ownerId, String currency) {
-        return rest.getWallet(ownerId, currency);
+        return wallets.get(ownerId, currency);
     }
 
-    // ---- convenience: Phase 2 transactions ----
-
-    /** Channel 1 — REST ingest (sync result with points / LP reflection status). */
+    /** Channel 1 — REST ingest. */
     public IngestionResult ingestRest(TransactionalEvent event) {
-        return rest.ingestTransaction(event);
+        return events.submitRest(event);
     }
 
-    /** Channel 2 — Kafka publish (async processing on engine). */
+    /** Channel 2 — Kafka publish. */
     public PublishResult ingestKafka(TransactionalEvent event) {
-        return kafka().publish(event);
+        return events.submitKafka(event);
     }
 
-    /** Channel 3 — file batch via REST. */
-    public List<IngestionResult> ingestFileRest(Path file) {
-        return file().process(file, FileLedgerClient.Delivery.REST);
+    /**
+     * Channel 3 — file via REST (fail-fast). Prefer
+     * {@code files().process(path, REST, BatchOptions.continueOnError())} for large files.
+     */
+    public List<IngestionResult> ingestFileRest(Path path) {
+        BatchResult<IngestionResult> batch = files.process(path, DeliveryChannel.REST, BatchOptions.failFast());
+        batch.throwIfAnyFailed();
+        return batch.successes();
     }
 
-    /** Channel 3 — file batch via Kafka. */
-    public List<IngestionResult> ingestFileKafka(Path file) {
-        return file().process(file, FileLedgerClient.Delivery.KAFKA);
+    /** Channel 3 — file via Kafka. */
+    public List<IngestionResult> ingestFileKafka(Path path) {
+        BatchResult<IngestionResult> batch = files.process(path, DeliveryChannel.KAFKA, BatchOptions.failFast());
+        batch.throwIfAnyFailed();
+        return batch.successes();
     }
 
     @Override
