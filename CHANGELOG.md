@@ -6,7 +6,8 @@ SemVer from **1.0.0**. Pre-1.0 snapshots are historical only.
 
 Phase B — developer experience for UAfinance (resource API, streaming files, batch partial results).
 
-**Delivery:** manual JAR email after contract (see `docs/DELIVERY.md`) — no Maven repository publish.
+**Delivery:** manual JAR email after contract — no Maven repository publish.  
+Docs: `docs/OVERVIEW.md`, `docs/DELIVERY.md`, `docs/INTEGRATION.md`, `docs/ERRORS.md`.
 
 ### Added
 - Resource API: `client.wallets()`, `client.events()`, `client.files()`

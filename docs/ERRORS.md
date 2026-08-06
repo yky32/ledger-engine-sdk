@@ -1,23 +1,23 @@
-# Error handling (UAfinance)
+# Error handling
 
-All failures extend `com.altech.ledger.sdk.LedgerException`. Prefer catching the **typed** subclasses.
+All SDK failures extend `com.altech.ledger.sdk.LedgerException`. Prefer catching **typed** subclasses when recovering.
 
 ## Exception map
 
-| Exception | HTTP | When | Retry? |
-|-----------|------|------|--------|
+| Exception | HTTP | When | Retryable? |
+|-----------|------|------|------------|
 | `LedgerValidationException` | 400 / 422 | Client `validate()` or engine validation | No |
-| `LedgerAuthException` | 401 / 403 | Missing/invalid token or API key | No (fix credentials) |
-| `LedgerNotFoundException` | 404 | Wallet / resource missing | No (onboard first) |
-| `LedgerConflictException` | 409 | Duplicate / data integrity | No (treat as success if idempotent) |
-| `LedgerRateLimitException` | 429 | Throttled; may set `Retry-After` | Yes (SDK auto-retries) |
-| `LedgerServerException` | 5xx | Engine / gateway | Yes (SDK auto-retries 500/502/503/504) |
-| `LedgerNetworkException` | — | Timeout, DNS, connection reset | Yes (SDK auto-retries) |
+| `LedgerAuthException` | 401 / 403 | Missing/invalid token or API key | No — fix credentials |
+| `LedgerNotFoundException` | 404 | Wallet / resource missing | No — onboard first if needed |
+| `LedgerConflictException` | 409 | Duplicate / data integrity | No — often safe to treat as already applied |
+| `LedgerRateLimitException` | 429 | Throttled; may include `Retry-After` | Yes — SDK auto-retries |
+| `LedgerServerException` | 5xx | Engine / gateway | Yes — SDK auto-retries 500/502/503/504 |
+| `LedgerNetworkException` | — | Timeout, DNS, connection reset | Yes — SDK auto-retries |
 | `LedgerException` | other | Fallback | Check `isRetryable()` |
 
 ## Engine error body
 
-ledger-engine returns:
+ledger-engine returns JSON shaped as:
 
 ```json
 {
@@ -32,57 +32,77 @@ ledger-engine returns:
 }
 ```
 
-The SDK parses this into `ApiError` on the exception:
+The SDK maps this to `ApiError` on the exception:
 
 ```java
 try {
-    client.ingestRest(event);
+    client.events().submit(event);
 } catch (LedgerValidationException ex) {
     log.warn("code={} fields={} requestId={}",
         ex.getCode(), ex.getFieldErrors(), ex.getRequestId());
 } catch (LedgerException ex) {
-    log.error("ledger fail http={} code={} requestId={} body={}",
-        ex.getHttpStatus(), ex.getCode(), ex.getRequestId(), ex.getBody());
+    log.error("ledger fail http={} code={} requestId={}",
+        ex.getHttpStatus(), ex.getCode(), ex.getRequestId());
 }
 ```
 
-## Headers the SDK sends
+Useful getters on `LedgerException`:
+
+| Getter | Meaning |
+|--------|---------|
+| `getHttpStatus()` | HTTP status, or `-1` if not HTTP |
+| `getCode()` | Engine / SDK error code |
+| `getRequestId()` | Correlation id when present |
+| `getBody()` | Raw response body |
+| `getApiError()` | Parsed engine error, if JSON matched |
+| `isRetryable()` | Hint for application-level retry |
+
+## REST headers related to support
 
 | Header | Purpose |
 |--------|---------|
-| `Authorization: Bearer …` | When `bearerToken` configured |
-| `X-Api-Key` (configurable) | When `apiKey` configured |
-| `Idempotency-Key` | Transaction: `eventId`; wallet: `wallet:{userId}:{currency}` |
-| `X-Request-Id` | New UUID per attempt (correlation) |
+| `Idempotency-Key` | Safe retries of the same business operation |
+| `X-Request-Id` | Per-attempt id — quote in support tickets |
 
-## Safe patterns for UAfinance
+## Patterns
 
 ```java
-// 1) Onboard is idempotent by design on engine (alreadyExists in batch)
-client.onboardWallet(OnboardWalletRequest.builder()
-    .userId(customerId)
-    .externalId(customerId)
-    .build()); // defaultExternalType=uafinance from config
-
-// 2) Always use stable eventId from POS / order id
-TransactionalEvent.builder()
-    .eventId(order.getId()) // enables safe retries + Idempotency-Key
-    ...
-
-// 3) 404 wallet → onboard then retry once
+// Missing wallet → onboard once, then retry get
 try {
-    return client.getWallet(userId, "LP");
+    return client.wallets().get(userId, "LP");
 } catch (LedgerNotFoundException e) {
-    client.onboardWallet(...);
-    return client.getWallet(userId, "LP");
+    client.wallets().onboard(OnboardWalletRequest.builder()
+        .userId(userId)
+        .currency("LP")
+        .build());
+    return client.wallets().get(userId, "LP");
 }
 ```
 
-## Disable retries (tests / special cases)
+```java
+// Stable eventId for safe REST retries
+TransactionalEvent.builder()
+    .eventId(order.getId())
+    ...
+```
 
 ```java
+// Disable SDK retries (e.g. tests)
 LedgerClientConfig.builder()
     .baseUrl(url)
     .noRetries()
     .build();
+```
+
+## Batch failures
+
+With `BatchOptions.continueOnError()`, inspect `BatchResult`:
+
+```java
+if (batch.hasFailures()) {
+    for (var item : batch.failures()) {
+        log.error("id={} err={}", item.getId(), item.getError().getMessage());
+    }
+    batch.throwSummaryIfAnyFailed(); // optional
+}
 ```
