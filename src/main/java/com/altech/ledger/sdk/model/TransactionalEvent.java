@@ -1,5 +1,7 @@
 package com.altech.ledger.sdk.model;
 
+import com.altech.ledger.sdk.LedgerValidationException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.math.BigDecimal;
@@ -12,6 +14,7 @@ import java.util.Objects;
  * Matches engine {@code TransactionalEvent} JSON contract.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class TransactionalEvent {
     private String eventId;
     private String userId;
@@ -60,17 +63,17 @@ public final class TransactionalEvent {
         require(eventType, "eventType");
         Objects.requireNonNull(amount, "amount");
         if (amount.signum() < 0) {
-            throw new IllegalArgumentException("amount must be >= 0");
+            throw new LedgerValidationException("amount must be >= 0");
         }
         require(currency, "currency");
         if (!currency.matches("[A-Z]{2,4}")) {
-            throw new IllegalArgumentException("currency must be 2-4 uppercase letters (e.g. LP)");
+            throw new LedgerValidationException("currency must be 2-4 uppercase letters (e.g. LP)");
         }
     }
 
     private static void require(String v, String name) {
         if (v == null || v.isBlank()) {
-            throw new IllegalArgumentException(name + " is required");
+            throw new LedgerValidationException(name + " is required");
         }
     }
 
@@ -87,7 +90,14 @@ public final class TransactionalEvent {
         public Builder userId(String userId) { this.userId = userId; return this; }
         public Builder eventType(String eventType) { this.eventType = eventType; return this; }
         public Builder amount(BigDecimal amount) { this.amount = amount; return this; }
+
+        /**
+         * Convenience for tests only — prefer {@link #amount(BigDecimal)} for money.
+         * @deprecated use {@link #amount(BigDecimal)} to avoid binary floating-point issues
+         */
+        @Deprecated
         public Builder amount(double amount) { this.amount = BigDecimal.valueOf(amount); return this; }
+
         public Builder currency(String currency) { this.currency = currency; return this; }
         public Builder occurredAt(Instant occurredAt) { this.occurredAt = occurredAt; return this; }
         public Builder metadata(Map<String, String> metadata) { this.metadata = metadata; return this; }

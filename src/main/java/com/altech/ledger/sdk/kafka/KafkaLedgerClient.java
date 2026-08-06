@@ -2,6 +2,7 @@ package com.altech.ledger.sdk.kafka;
 
 import com.altech.ledger.sdk.LedgerClientConfig;
 import com.altech.ledger.sdk.LedgerException;
+import com.altech.ledger.sdk.LedgerNetworkException;
 import com.altech.ledger.sdk.json.JsonSupport;
 import com.altech.ledger.sdk.model.TransactionalEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Channel 2 — Kafka MQ publish of {@link TransactionalEvent} to ledger-engine topic.
+ * <p>
+ * Requires {@code org.apache.kafka:kafka-clients} on the classpath (optional Maven dependency).
  * Engine must have {@code ledger.integration.kafka.enabled=true}.
  */
 public final class KafkaLedgerClient implements AutoCloseable {
@@ -31,6 +34,7 @@ public final class KafkaLedgerClient implements AutoCloseable {
         if (config.getKafkaBootstrapServers() == null || config.getKafkaBootstrapServers().isBlank()) {
             throw new IllegalArgumentException("kafkaBootstrapServers is required for Kafka channel");
         }
+        ensureKafkaOnClasspath();
         this.mapper = JsonSupport.mapper();
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getKafkaBootstrapServers());
@@ -42,6 +46,18 @@ public final class KafkaLedgerClient implements AutoCloseable {
         this.producer = new KafkaProducer<>(props);
     }
 
+    private static void ensureKafkaOnClasspath() {
+        try {
+            Class.forName("org.apache.kafka.clients.producer.KafkaProducer");
+        } catch (ClassNotFoundException ex) {
+            throw new IllegalStateException(
+                "Kafka channel requires org.apache.kafka:kafka-clients on the classpath. "
+                    + "Add the dependency (it is optional for REST-only consumers). "
+                    + "CLI fat jar (classifier 'cli') already includes Kafka.",
+                ex);
+        }
+    }
+
     /**
      * Publish event asynchronously; returns Future of broker metadata.
      * Engine processes asynchronously — no IngestionResult in this channel.
@@ -50,22 +66,26 @@ public final class KafkaLedgerClient implements AutoCloseable {
         event.validate();
         try {
             String json = mapper.writeValueAsString(event);
+            // Key by userId for per-user ordering on a single partition
+            String key = event.getUserId() != null ? event.getUserId() : event.getEventId();
             ProducerRecord<String, String> record = new ProducerRecord<>(
-                config.getKafkaTopic(), event.getEventId(), json);
+                config.getKafkaTopic(), key, json);
             return producer.send(record);
         } catch (Exception ex) {
             throw new LedgerException("Kafka serialize/publish failed: " + ex.getMessage(), ex);
         }
     }
 
-    /** Publish and wait for ack. */
-    public RecordMetadata publish(TransactionalEvent event) {
+    /** Publish and wait for broker ack. */
+    public PublishResult publish(TransactionalEvent event) {
         try {
-            return publishAsync(event).get(config.getHttpTimeout().toMillis(), TimeUnit.MILLISECONDS);
+            RecordMetadata meta = publishAsync(event)
+                .get(config.getHttpTimeout().toMillis(), TimeUnit.MILLISECONDS);
+            return new PublishResult(event.getEventId(), meta.topic(), meta.partition(), meta.offset());
         } catch (LedgerException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new LedgerException("Kafka publish wait failed: " + ex.getMessage(), ex);
+            throw new LedgerNetworkException("Kafka publish wait failed: " + ex.getMessage(), ex);
         }
     }
 

@@ -2,16 +2,16 @@ package com.altech.ledger.sdk;
 
 import com.altech.ledger.sdk.file.FileLedgerClient;
 import com.altech.ledger.sdk.kafka.KafkaLedgerClient;
+import com.altech.ledger.sdk.kafka.PublishResult;
 import com.altech.ledger.sdk.model.*;
 import com.altech.ledger.sdk.rest.RestLedgerClient;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Facade for product clients (e.g. UAfinance backend).
+ * Facade for product clients (first client: UAfinance).
  * <p>
  * Channels:
  * <ol>
@@ -39,6 +39,17 @@ public final class LedgerClient implements AutoCloseable {
         return create(LedgerClientConfig.builder().baseUrl(baseUrl).build());
     }
 
+    /**
+     * UAfinance-oriented defaults: currency LP, externalType {@code uafinance}.
+     */
+    public static LedgerClient forUafinance(String baseUrl) {
+        return create(LedgerClientConfig.builder()
+            .baseUrl(baseUrl)
+            .defaultCurrency("LP")
+            .defaultExternalType("uafinance")
+            .build());
+    }
+
     public LedgerClientConfig config() {
         return config;
     }
@@ -48,7 +59,8 @@ public final class LedgerClient implements AutoCloseable {
     }
 
     /**
-     * Lazy Kafka channel. Requires {@link LedgerClientConfig.Builder#kafkaBootstrapServers(String)}.
+     * Lazy Kafka channel. Requires {@link LedgerClientConfig.Builder#kafkaBootstrapServers(String)}
+     * and {@code kafka-clients} on the classpath.
      */
     public synchronized KafkaLedgerClient kafka() {
         if (kafka == null) {
@@ -89,7 +101,7 @@ public final class LedgerClient implements AutoCloseable {
     }
 
     /** Channel 2 — Kafka publish (async processing on engine). */
-    public RecordMetadata ingestKafka(TransactionalEvent event) {
+    public PublishResult ingestKafka(TransactionalEvent event) {
         return kafka().publish(event);
     }
 

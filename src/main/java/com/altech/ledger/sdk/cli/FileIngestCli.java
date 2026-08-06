@@ -9,9 +9,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Runnable JAR entrypoint for optional file-based ingestion.
+ * Runnable CLI entrypoint for optional file-based ingestion.
+ * Packaged as {@code ledger-engine-sdk-*-cli.jar} (shaded).
  * <pre>
- * java -jar ledger-engine-sdk-0.1.0-SNAPSHOT.jar \
+ * java -jar ledger-engine-sdk-0.2.0-SNAPSHOT-cli.jar \
  *   --base-url http://localhost:8080 \
  *   --file ./events.ndjson \
  *   --delivery REST
@@ -22,10 +23,13 @@ public final class FileIngestCli {
 
     public static void main(String[] args) {
         String baseUrl = envOr("LEDGER_BASE_URL", "http://localhost:8080");
+        String bearer = envOr("LEDGER_TOKEN", null);
+        String apiKey = envOr("LEDGER_API_KEY", null);
         String file = null;
         String delivery = "REST";
         String kafkaBootstrap = envOr("KAFKA_BOOTSTRAP", null);
         String kafkaTopic = envOr("KAFKA_TOPIC", "ledger.transaction.events");
+        String externalType = envOr("LEDGER_EXTERNAL_TYPE", "uafinance");
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -34,6 +38,9 @@ public final class FileIngestCli {
                 case "--delivery" -> delivery = args[++i];
                 case "--kafka-bootstrap" -> kafkaBootstrap = args[++i];
                 case "--kafka-topic" -> kafkaTopic = args[++i];
+                case "--token" -> bearer = args[++i];
+                case "--api-key" -> apiKey = args[++i];
+                case "--external-type" -> externalType = args[++i];
                 case "--help", "-h" -> {
                     printHelp();
                     return;
@@ -46,7 +53,16 @@ public final class FileIngestCli {
             System.exit(2);
         }
 
-        LedgerClientConfig.Builder cfg = LedgerClientConfig.builder().baseUrl(baseUrl);
+        LedgerClientConfig.Builder cfg = LedgerClientConfig.builder()
+            .baseUrl(baseUrl)
+            .defaultExternalType(externalType)
+            .defaultCurrency("LP");
+        if (bearer != null) {
+            cfg.bearerToken(bearer);
+        }
+        if (apiKey != null) {
+            cfg.apiKey(apiKey);
+        }
         if (kafkaBootstrap != null) {
             cfg.kafkaBootstrapServers(kafkaBootstrap).kafkaTopic(kafkaTopic);
         }
@@ -61,7 +77,8 @@ public final class FileIngestCli {
                 for (IngestionResult r : results) {
                     System.out.println(r);
                     if (r.isApplied()) applied++;
-                    else if (r.getStatus() == IngestionResult.Status.SKIPPED) skipped++;
+                    else if (r.getStatus() == IngestionResult.Status.SKIPPED
+                        || r.getStatus() == IngestionResult.Status.DUPLICATE) skipped++;
                     else other++;
                 }
                 System.out.printf("Done. total=%d applied=%d skipped=%d other=%d%n",
@@ -80,12 +97,15 @@ public final class FileIngestCli {
             ledger-engine-sdk file ingest CLI
 
             Usage:
-              java -jar ledger-engine-sdk-*.jar --file events.ndjson [--base-url URL] [--delivery REST|KAFKA]
+              java -jar ledger-engine-sdk-*-cli.jar --file events.ndjson [options]
 
             Options:
               --base-url URL           Ledger base URL (default http://localhost:8080)
               --file PATH              JSON array or NDJSON of TransactionalEvent
               --delivery REST|KAFKA    Default REST
+              --token TOKEN            Bearer token (or LEDGER_TOKEN)
+              --api-key KEY            API key header (or LEDGER_API_KEY)
+              --external-type TYPE     Default uafinance
               --kafka-bootstrap HOSTS  Required for KAFKA delivery
               --kafka-topic TOPIC      Default ledger.transaction.events
             """);

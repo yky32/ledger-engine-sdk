@@ -2,13 +2,19 @@
 
 Java client SDK for **[ledger-engine](https://github.com/yky32/ledger-engine)**.
 
-Product clients (e.g. UAfinance backend) depend on this library, build the **agreed objects**, and shoot work into the engine over:
+**First product client: UAfinance** — 1 customer = 1 LP wallet; POS/order events → engine rules → LP balance.
 
-1. **REST**
-2. **Kafka MQ**
+Product backends depend on this library, build the **agreed objects**, and shoot work into the engine over:
+
+1. **REST** (sync result)
+2. **Kafka MQ** (async)
 3. **File-based batch** (optional)
 
 No separate `*-api` module — contracts + transports live in this single SDK.
+
+| Version | Status |
+|---------|--------|
+| `0.2.0-SNAPSHOT` | Phase A: typed errors, auth, retries, idempotency, optional Kafka, thin JAR |
 
 ## Maven
 
@@ -16,107 +22,103 @@ No separate `*-api` module — contracts + transports live in this single SDK.
 <dependency>
   <groupId>com.altech</groupId>
   <artifactId>ledger-engine-sdk</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
+</dependency>
+
+<!-- Only if you use Kafka channel -->
+<dependency>
+  <groupId>org.apache.kafka</groupId>
+  <artifactId>kafka-clients</artifactId>
+  <version>3.8.1</version>
 </dependency>
 ```
-
-Install locally:
 
 ```bash
 mvn clean install
 ```
 
-Or publish to your Maven repo / GitHub Packages.
-
-## Runnable JAR (file ingest CLI)
-
-```bash
-mvn clean package
-java -jar target/ledger-engine-sdk-0.1.0-SNAPSHOT.jar \
-  --base-url http://localhost:8080 \
-  --file ./events.ndjson \
-  --delivery REST
-```
-
-## Quick start
-
-### 1) Create client
+## UAfinance quick start
 
 ```java
 import com.altech.ledger.sdk.LedgerClient;
 import com.altech.ledger.sdk.LedgerClientConfig;
+import com.altech.ledger.sdk.model.*;
 
-LedgerClient client = LedgerClient.create(
-    LedgerClientConfig.builder()
+try (LedgerClient client = LedgerClient.create(LedgerClientConfig.builder()
         .baseUrl("https://ledger.uafinance.internal")
-        .kafkaBootstrapServers("kafka:9092")          // optional
-        .kafkaTopic("ledger.transaction.events")
+        .bearerToken(System.getenv("LEDGER_TOKEN"))   // optional until engine requires it
         .defaultCurrency("LP")
-        .build()
-);
+        .defaultExternalType("uafinance")
+        .build())) {
+
+    // Phase 1 — wallet
+    client.onboardWallet(OnboardWalletRequest.builder()
+        .userId("UAF-10001")
+        .name("Member 10001")
+        .externalId("UAF-10001")
+        .build());
+
+    // Phase 2 — transaction (Idempotency-Key = eventId)
+    var result = client.ingestRest(TransactionalEvent.builder()
+        .eventId("pos-20260806-001")
+        .userId("UAF-10001")
+        .eventType("PURCHASE")
+        .amount(new java.math.BigDecimal("150.00"))
+        .currency("LP")
+        .build());
+    // result.getStatus() == EARNED, result.getPoints() ...
+
+    var wallet = client.getWallet("UAF-10001", "LP");
+}
 ```
 
-### 2) Phase 1 — wallet for customer (1:1)
+Shorthand:
 
 ```java
-import com.altech.ledger.sdk.model.OnboardWalletRequest;
-
-client.onboardWallet(OnboardWalletRequest.builder()
-    .userId("UAF-10001")
-    .currency("LP")
-    .name("Member 10001")
-    .externalId("UAF-10001")
-    .externalType("uafinance")
-    .build());
-
-// bulk (max 1000 per call)
-client.onboardWalletsBatch(listOfRequests);
+LedgerClient client = LedgerClient.forUafinance("https://ledger.uafinance.internal");
 ```
 
-### 3) Phase 2 — shoot transaction (3 channels)
+Full snippet: [`examples/uafinance/UafinanceQuickstart.java`](examples/uafinance/UafinanceQuickstart.java)  
+Error handling: [`docs/ERRORS.md`](docs/ERRORS.md)
 
-**Agreed object:**
+## Channels
+
+| Channel | SDK call | Notes |
+|---------|----------|--------|
+| **REST** | `client.ingestRest(event)` | Sync; retries 429/5xx; returns `IngestionResult` |
+| **Kafka** | `client.ingestKafka(event)` | Needs `kafka-clients` + bootstrap; returns `PublishResult` |
+| **File** | `client.ingestFileRest(path)` | NDJSON or JSON array |
+
+## Auth & reliability (Phase A)
 
 ```java
-import com.altech.ledger.sdk.model.TransactionalEvent;
-import java.math.BigDecimal;
-import java.time.Instant;
-
-TransactionalEvent event = TransactionalEvent.builder()
-    .eventId("pos-20260806-001")
-    .userId("UAF-10001")
-    .eventType("PURCHASE")   // engine rule → EARN
-    .amount(new BigDecimal("150.00"))
-    .currency("LP")
-    .occurredAt(Instant.now())
+LedgerClientConfig.builder()
+    .baseUrl(url)
+    .bearerToken(token)              // Authorization: Bearer …
+    // .apiKey(key)                  // X-Api-Key (header name configurable)
+    .defaultHeader("X-Tenant", "uaf")
+    .sendIdempotencyKey(true)        // default true
+    .sendRequestId(true)             // default true
+    // .noRetries()                  // disable for tests
     .build();
 ```
 
-| Channel | SDK call | Engine behaviour |
-|---|---|---|
-| **1. REST** | `client.ingestRest(event)` | Sync process; returns `IngestionResult` (points, EARNED/…) |
-| **2. Kafka** | `client.ingestKafka(event)` | Async; engine consumer on `ledger.transaction.events` |
-| **3. File** | `client.ingestFileRest(path)` / `ingestFileKafka(path)` | NDJSON or JSON array of events |
+| Header | Value |
+|--------|--------|
+| `Idempotency-Key` | Event: `eventId`; wallet: `wallet:{userId}:{currency}` |
+| `X-Request-Id` | UUID per attempt |
 
-```java
-// REST
-var result = client.ingestRest(event);
-// result.getStatus() == EARNED, result.getPoints() ...
+## Runnable CLI (file ingest)
 
-// Kafka
-client.ingestKafka(event);
+Thin library JAR is the main artifact. Shaded CLI:
 
-// File (NDJSON)
-client.ingestFileRest(Path.of("purchases-2026-08-06.ndjson"));
-```
-
-### 4) Engine applies formula → LP wallet
-
-Engine-side rules (not in SDK) map `eventType` → formula (`AMOUNT` / `FIXED:n` / `RATE:n`) and post to wallet account `wallet:{userId}:LP`.
-
-```java
-var wallet = client.getWallet("UAF-10001", "LP");
-// wallet.getBalance().getBalance()  or account ledgerBalance
+```bash
+mvn clean package
+java -jar target/ledger-engine-sdk-0.2.0-SNAPSHOT-cli.jar \
+  --base-url http://localhost:8080 \
+  --file ./events.ndjson \
+  --delivery REST \
+  --token "$LEDGER_TOKEN"
 ```
 
 ## File formats
@@ -140,20 +142,23 @@ var wallet = client.getWallet("UAF-10001", "LP");
 
 ```text
 com.altech.ledger.sdk
-├── LedgerClient              # facade
+├── LedgerClient              # facade (+ forUafinance)
 ├── LedgerClientConfig
+├── LedgerException + typed subclasses
+├── error/                    # ApiError, ErrorMapper, RetryPolicy
 ├── model/                    # agreement objects
 ├── rest/RestLedgerClient
-├── kafka/KafkaLedgerClient
+├── kafka/KafkaLedgerClient, PublishResult
 ├── file/FileLedgerClient
-└── cli/FileIngestCli         # runnable JAR main
+└── cli/FileIngestCli         # classifier cli JAR
 ```
 
 ## Requirements
 
 - Java 17+
 - ledger-engine reachable (HTTP and/or Kafka enabled)
+- Optional: `kafka-clients` for MQ channel
 
 ## License / status
 
-`0.1.0-SNAPSHOT` — align versions with your ledger-engine deployment.
+`0.2.0-SNAPSHOT` — see [CHANGELOG.md](CHANGELOG.md). Align deploy with your ledger-engine version.

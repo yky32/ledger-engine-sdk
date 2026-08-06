@@ -1,5 +1,7 @@
 package com.altech.ledger.sdk.model;
 
+import com.altech.ledger.sdk.LedgerValidationException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
@@ -7,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Matches engine {@code OnboardWalletRequest}.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class OnboardWalletRequest {
     private String userId;
     private String currency;
@@ -42,10 +45,10 @@ public final class OnboardWalletRequest {
 
     public void validate() {
         if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId is required");
+            throw new LedgerValidationException("userId is required");
         }
         if (currency == null || !currency.matches("[A-Z]{2,4}")) {
-            throw new IllegalArgumentException("currency must be 2-4 uppercase letters");
+            throw new LedgerValidationException("currency must be 2-4 uppercase letters");
         }
     }
 

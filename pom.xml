@@ -6,11 +6,11 @@
 
     <groupId>com.altech</groupId>
     <artifactId>ledger-engine-sdk</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
     <name>ledger-engine-sdk</name>
     <description>
         Client SDK for Ledger Engine: shared agreement objects, REST, Kafka, and file-based ingestion.
-        Integrate from any Java backend via Maven dependency or runnable JAR (file processor).
+        First product client: UAfinance. Integrate via Maven dependency or runnable CLI JAR (classifier cli).
     </description>
     <url>https://github.com/yky32/ledger-engine-sdk</url>
 
@@ -34,11 +34,12 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson.version}</version>
         </dependency>
-        <!-- Kafka producer (optional at runtime if you only use REST) -->
+        <!-- Optional at runtime: only required if you use KafkaLedgerClient / ingestKafka -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -64,7 +65,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
             </plugin>
-            <!-- Runnable JAR for file-based batch CLI -->
+            <!-- Thin library JAR is the main artifact; CLI is attached with classifier "cli" -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -76,6 +77,8 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>cli</shadedClassifierName>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">

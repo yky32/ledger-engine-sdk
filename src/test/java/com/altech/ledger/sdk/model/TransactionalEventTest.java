@@ -1,5 +1,6 @@
 package com.altech.ledger.sdk.model;
 
+import com.altech.ledger.sdk.LedgerValidationException;
 import com.altech.ledger.sdk.json.JsonSupport;
 import org.junit.jupiter.api.Test;
 
@@ -34,13 +35,24 @@ class TransactionalEventTest {
 
     @Test
     void rejectsNegativeAmount() {
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(LedgerValidationException.class, () ->
             TransactionalEvent.builder()
                 .eventId("e")
                 .userId("u")
                 .eventType("PURCHASE")
-                .amount(-1)
+                .amount(new BigDecimal("-1"))
                 .currency("LP")
                 .build());
+    }
+
+    @Test
+    void ignoresUnknownPropertiesFromEngine() throws Exception {
+        String json = """
+            {"eventId":"e1","userId":"U1","eventType":"PURCHASE","amount":10,"currency":"LP",
+             "engineOnlyField":true,"schemaVersion":2}
+            """;
+        TransactionalEvent e = JsonSupport.mapper().readValue(json, TransactionalEvent.class);
+        assertEquals("e1", e.getEventId());
+        e.validate();
     }
 }
