@@ -2,6 +2,7 @@ package com.altech.ledger.sdk;
 
 import com.altech.ledger.sdk.api.EventApi;
 import com.altech.ledger.sdk.api.FileApi;
+import com.altech.ledger.sdk.api.CatalogApi;
 import com.altech.ledger.sdk.api.UseCaseApi;
 import com.altech.ledger.sdk.api.WalletApi;
 import com.altech.ledger.sdk.batch.BatchOptions;
@@ -36,6 +37,7 @@ public final class LedgerClient implements AutoCloseable {
     private final WalletApi wallets;
     private final EventApi events;
     private final UseCaseApi useCases;
+    private final CatalogApi catalog;
     private final FileApi files;
     private KafkaLedgerClient kafka;
     private FileLedgerClient file;
@@ -47,6 +49,7 @@ public final class LedgerClient implements AutoCloseable {
         this.wallets = new WalletApi(rest, asyncExecutor);
         this.events = new EventApi(rest, this::kafka, asyncExecutor);
         this.useCases = new UseCaseApi(events);
+        this.catalog = new CatalogApi(rest);
         this.files = new FileApi(rest, this::kafka);
     }
 
@@ -90,6 +93,11 @@ public final class LedgerClient implements AutoCloseable {
      */
     public UseCaseApi useCases() {
         return useCases;
+    }
+
+    /** Discover ops-configured transaction / COA use cases. */
+    public CatalogApi catalog() {
+        return catalog;
     }
 
     /** Phase 3 — streaming file ingest. */

@@ -18,6 +18,32 @@ Call **ledger-engine-sdk** methods; SDK fills the wire body.
 
 ## 2. Preferred upstream code
 
+### 2a. Discover what ops configured (recommended for xapi)
+
+UAF operators set Brain rules + COA in LedgeRX Admin. Upstream **pulls the catalog** then fills `code`:
+
+```java
+// Cache periodically (e.g. every 5 min) or on startup
+List<UseCaseDescriptor> catalog = client.catalog().listUseCases();
+// each: code, name, amountMode (ZERO|SPEND), formulaSummary, coaProfileCode, pointCurrency
+
+UseCaseDescriptor like = client.catalog().get("LIKE_FB_PAGE");
+client.useCases().invoke(like, ownerId, eventId, null, null, Map.of("pageId", pageId));
+
+UseCaseDescriptor cc = catalog.stream()
+    .filter(u -> "CC_TXN_LP".equals(u.getCode())).findFirst().orElseThrow();
+client.useCases().invoke(cc, ownerId, txnId, spendAmount, "HKD", Map.of("mcc", mcc));
+```
+
+| amountMode | xapi amount |
+|------------|-------------|
+| ZERO | `null` or `0` (like page) |
+| SPEND | required &gt; 0 |
+| ANY | optional |
+
+### 2b. Typed helpers (optional sugar)
+
+
 ```java
 try (LedgerClient client = LedgerClient.forUafinance("https://ledger.internal")) {
 

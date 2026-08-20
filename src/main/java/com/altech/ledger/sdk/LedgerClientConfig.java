@@ -27,6 +27,7 @@ public final class LedgerClientConfig {
     private final String transactionsPath;
     private final String walletsPath;
     private final String walletsBatchPath;
+    private final String useCasesPath;
     private final String kafkaBootstrapServers;
     private final String kafkaTopic;
     private final Map<String, String> kafkaExtra;
@@ -47,6 +48,7 @@ public final class LedgerClientConfig {
         this.transactionsPath = b.transactionsPath;
         this.walletsPath = b.walletsPath;
         this.walletsBatchPath = b.walletsBatchPath;
+        this.useCasesPath = b.useCasesPath;
         this.kafkaBootstrapServers = b.kafkaBootstrapServers;
         this.kafkaTopic = b.kafkaTopic;
         this.kafkaExtra = Map.copyOf(b.kafkaExtra);
@@ -71,6 +73,7 @@ public final class LedgerClientConfig {
     public String getTransactionsPath() { return transactionsPath; }
     public String getWalletsPath() { return walletsPath; }
     public String getWalletsBatchPath() { return walletsBatchPath; }
+    public String getUseCasesPath() { return useCasesPath; }
     public String getKafkaBootstrapServers() { return kafkaBootstrapServers; }
     public String getKafkaTopic() { return kafkaTopic; }
     public Map<String, String> getKafkaExtra() { return kafkaExtra; }
@@ -103,6 +106,7 @@ public final class LedgerClientConfig {
         private String transactionsPath = "/integrations/webhooks/transactions";
         private String walletsPath = "/wallets";
         private String walletsBatchPath = "/wallets/batch";
+        private String useCasesPath = "/integrations/use-cases";
         private String kafkaBootstrapServers;
         private String kafkaTopic = "ledger.transaction.events";
         private final Map<String, String> kafkaExtra = new HashMap<>();
@@ -122,6 +126,7 @@ public final class LedgerClientConfig {
         public Builder transactionsPath(String transactionsPath) { this.transactionsPath = transactionsPath; return this; }
         public Builder walletsPath(String walletsPath) { this.walletsPath = walletsPath; return this; }
         public Builder walletsBatchPath(String walletsBatchPath) { this.walletsBatchPath = walletsBatchPath; return this; }
+        public Builder useCasesPath(String useCasesPath) { this.useCasesPath = useCasesPath; return this; }
         public Builder kafkaBootstrapServers(String kafkaBootstrapServers) {
             this.kafkaBootstrapServers = kafkaBootstrapServers; return this;
         }
