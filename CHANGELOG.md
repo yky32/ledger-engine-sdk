@@ -1,3 +1,9 @@
+## Unreleased
+
+- `UseCaseApi` / `client.useCases()` — like FB, CC txn, purchase; no hand-built JSON
+- `EventTypes` constants; `TransactionalEvent` serializes `ownerId` + `userId`
+- docs/EXPECTED_CONTRACT.md
+
 # Changelog
 
 SemVer from **1.0.0**. Pre-1.0 snapshots are historical only.

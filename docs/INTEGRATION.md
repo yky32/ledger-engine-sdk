@@ -108,6 +108,18 @@ client.close();
 
 ---
 
+## 3b. Prefer use-cases (no custom JSON)
+
+See **[EXPECTED_CONTRACT.md](EXPECTED_CONTRACT.md)**.
+
+```java
+client.useCases().likeFacebookPage(ownerId, eventId, pageId);
+client.useCases().ccTxnLp(ownerId, eventId, amount, "HKD", mcc);
+client.useCases().purchase(ownerId, eventId, amount, "HKD");
+```
+
+Ops still configures Door/Brain/COA for each `eventType` on the engine.
+
 ## 4. Phase 1 — wallets
 
 One **owner + currency** maps to one wallet (typical loyalty: one LP wallet per customer).

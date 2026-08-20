@@ -16,6 +16,7 @@ Product systems use this SDK to onboard wallets, submit transactional events, an
 | **[docs/OVERVIEW.md](docs/OVERVIEW.md)** | Product map, channels, version pairing |
 | **[docs/DELIVERY.md](docs/DELIVERY.md)** | **Altech:** contract → build → email JAR (no Maven publish) |
 | **[docs/INTEGRATION.md](docs/INTEGRATION.md)** | **Client:** install jar, Phase 1/2, config, API |
+| **[docs/EXPECTED_CONTRACT.md](docs/EXPECTED_CONTRACT.md)** | **Wire + UseCaseApi** — upstream must not hand-build JSON |
 | **[docs/ERRORS.md](docs/ERRORS.md)** | Exception types and recovery |
 | **[CHANGELOG.md](CHANGELOG.md)** | Release history |
 
@@ -52,6 +53,11 @@ try (LedgerClient client = LedgerClient.create(LedgerClientConfig.builder()
         .externalId("CUST-10001")
         .build());
 
+    // Preferred: use-cases (no hand-built JSON)
+    client.useCases().likeFacebookPage("CUST-10001", "like-001", "ua-page");
+    client.useCases().ccTxnLp("CUST-10001", "txn-1", new java.math.BigDecimal("500"), "HKD", "5411");
+
+    // Low-level (escape hatch)
     var result = client.events().submit(TransactionalEvent.builder()
         .eventId("order-001")
         .userId("CUST-10001")
