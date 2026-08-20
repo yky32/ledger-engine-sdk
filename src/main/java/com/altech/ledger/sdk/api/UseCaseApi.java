@@ -3,6 +3,7 @@ package com.altech.ledger.sdk.api;
 import com.altech.ledger.sdk.model.EventTypes;
 import com.altech.ledger.sdk.model.IngestionResult;
 import com.altech.ledger.sdk.model.TransactionalEvent;
+import com.altech.ledger.sdk.model.UseCaseDescriptor;
 import com.altech.ledger.sdk.LedgerValidationException;
 
 import java.math.BigDecimal;
@@ -28,6 +29,45 @@ public final class UseCaseApi {
 
     public UseCaseApi(EventApi events) {
         this.events = Objects.requireNonNull(events, "events");
+    }
+
+    /**
+     * Invoke a use case <b>code from the catalog</b> (ops-configured eventType / COA key).
+     * Amount null → 0 (engagement / FIXED rules).
+     */
+    public IngestionResult invoke(String useCaseCode, String ownerId, String eventId,
+                                  BigDecimal amount, String currency, Map<String, String> metadata) {
+        String code = require(useCaseCode, "useCaseCode");
+        Map<String, String> md = metadata == null ? new HashMap<>() : new HashMap<>(metadata);
+        md.put("useCase", code);
+        BigDecimal amt = amount == null ? BigDecimal.ZERO : amount;
+        String ccy = currency == null || currency.isBlank() ? "HKD" : currency;
+        return events.submit(TransactionalEvent.builder()
+            .eventId(require(eventId, "eventId"))
+            .userId(require(ownerId, "ownerId"))
+            .eventType(code)
+            .amount(amt)
+            .currency(requireCcy(ccy))
+            .occurredAt(Instant.now())
+            .metadata(md)
+            .build());
+    }
+
+    /**
+     * Invoke using a catalog descriptor (validates spend when amountMode=SPEND).
+     */
+    public IngestionResult invoke(UseCaseDescriptor useCase, String ownerId, String eventId,
+                                  BigDecimal amount, String spendCurrency, Map<String, String> metadata) {
+        Objects.requireNonNull(useCase, "useCase");
+        if (useCase.isSpendAmountRequired() && (amount == null || amount.signum() <= 0)) {
+            throw new LedgerValidationException(
+                "useCase " + useCase.getCode() + " requires spend amount > 0");
+        }
+        String ccy = spendCurrency;
+        if (ccy == null || ccy.isBlank()) {
+            ccy = useCase.getCoaCurrency() != null ? useCase.getCoaCurrency() : "HKD";
+        }
+        return invoke(useCase.getCode(), ownerId, eventId, amount, ccy, metadata);
     }
 
     /**

@@ -110,10 +110,7 @@ public final class RestLedgerClient implements AutoCloseable {
             byte[] json = mapper.writeValueAsBytes(body);
             HttpResponse<String> response = sendWithRetry("POST", path, json, idempotencyKey);
             assertOk(response, okStatuses);
-            if (response.body() == null || response.body().isBlank()) {
-                return null;
-            }
-            return mapper.readValue(response.body(), type);
+            return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -125,7 +122,7 @@ public final class RestLedgerClient implements AutoCloseable {
         try {
             HttpResponse<String> response = sendWithRetry("GET", path, null, null);
             assertOk(response, 200);
-            return mapper.readValue(response.body(), type);
+            return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -137,12 +134,57 @@ public final class RestLedgerClient implements AutoCloseable {
         try {
             HttpResponse<String> response = sendWithRetry("GET", path, null, null);
             assertOk(response, 200);
-            return mapper.readValue(response.body(), type);
+            return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new LedgerNetworkException("REST GET " + path + " failed: " + ex.getMessage(), ex);
         }
+    }
+
+    /** Supports engine {@code Result} envelope {@code {code,data}} or bare JSON. */
+    private <T> T readBody(String body, Class<T> type) throws Exception {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(body);
+        if (root != null && root.isObject() && root.has("data") && root.has("code")) {
+            com.fasterxml.jackson.databind.JsonNode data = root.get("data");
+            if (data == null || data.isNull()) {
+                return null;
+            }
+            return mapper.treeToValue(data, type);
+        }
+        return mapper.readValue(body, type);
+    }
+
+    private <T> T readBody(String body, TypeReference<T> type) throws Exception {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(body);
+        if (root != null && root.isObject() && root.has("data") && root.has("code")) {
+            com.fasterxml.jackson.databind.JsonNode data = root.get("data");
+            if (data == null || data.isNull()) {
+                return null;
+            }
+            return mapper.convertValue(data, type);
+        }
+        return mapper.readValue(body, type);
+    }
+
+    /**
+     * Ops-configured use-case catalog (Brain + COA + recipe).
+     * {@code GET /integrations/use-cases?enabledOnly=true}
+     */
+    public List<UseCaseDescriptor> listUseCases(boolean enabledOnly) {
+        String path = config.getUseCasesPath() + "?enabledOnly=" + enabledOnly;
+        List<UseCaseDescriptor> list = get(path, new TypeReference<>() {});
+        return list == null ? List.of() : list;
+    }
+
+    public UseCaseDescriptor getUseCase(String code) {
+        return get(config.getUseCasesPath() + "/" + encode(code), UseCaseDescriptor.class);
     }
 
     private HttpResponse<String> sendWithRetry(String method, String path, byte[] body,
