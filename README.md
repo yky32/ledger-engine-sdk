@@ -6,7 +6,8 @@ Product systems use this SDK to onboard wallets, submit transactional events, an
 
 | Version | Notes |
 |---------|--------|
-| **1.1.0** | Resource API, streaming file ingest, batch options |
+| **1.2.0** | Catalog + invoke + dry-run + verifyEngine + UAF quickstart |
+| 1.1.0 | Resource API, streaming file ingest, batch options |
 | 1.0.0 | Auth, typed errors, retries, optional Kafka, thin JAR |
 
 ## Documentation
@@ -16,7 +17,9 @@ Product systems use this SDK to onboard wallets, submit transactional events, an
 | **[docs/OVERVIEW.md](docs/OVERVIEW.md)** | Product map, channels, version pairing |
 | **[docs/DELIVERY.md](docs/DELIVERY.md)** | **Altech:** contract → build → email JAR (no Maven publish) |
 | **[docs/INTEGRATION.md](docs/INTEGRATION.md)** | **Client:** install jar, Phase 1/2, config, API |
+| **[docs/QUICKSTART_UAF.md](docs/QUICKSTART_UAF.md)** | **xapi 10-min** integrate |
 | **[docs/EXPECTED_CONTRACT.md](docs/EXPECTED_CONTRACT.md)** | **Wire + UseCaseApi** — upstream must not hand-build JSON |
+| **[docs/VERSIONING.md](docs/VERSIONING.md)** | SDK ↔ engine matrix |
 | **[docs/ERRORS.md](docs/ERRORS.md)** | Exception types and recovery |
 | **[CHANGELOG.md](CHANGELOG.md)** | Release history |
 

@@ -106,3 +106,22 @@ if (batch.hasFailures()) {
     batch.throwSummaryIfAnyFailed(); // optional
 }
 ```
+
+
+## UAF / LedgeRX runbook (ingest)
+
+| Symptom / code | Cause | Action |
+|----------------|--------|--------|
+| status SKIPPED + NO_RULE | Brain has no enabled rule for eventType | Ops: Admin Digestion rule; xapi: `catalog().require(code)` first |
+| points null / 0 + POINTS | Formula computed ≤ 0 | Check FIXED value / RATE / amount |
+| AMOUNT | Spend formula but amount ≤ 0 | Send spend amount; amountMode=SPEND |
+| 404 wallet | No wallet and auto-create off | Onboard or enable Door auto-wallet |
+| 409 / DUPLICATE | Same eventId already applied | Treat as success if same business fact |
+| 401/403 | Auth | Fix LEDGER_TOKEN / API key |
+| 429 | Rate limit | SDK retries; back off |
+| 5xx | Engine | Retry same eventId; escalate with requestId |
+| catalog empty | No enabled rules | Ops configure Brain |
+| verifyEngine fails minSdk | JAR too old | Upgrade SDK to engine minSdkVersion |
+| verifyEngine 404 sdk-info | Old engine | Deploy engine with `/integrations/sdk-info` |
+
+Always log: `eventId`, `ownerId`, `useCase code`, `requestId`, `matchedRuleCode`, `movementId`.

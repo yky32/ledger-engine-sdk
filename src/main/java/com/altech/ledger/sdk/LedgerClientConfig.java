@@ -25,6 +25,8 @@ public final class LedgerClientConfig {
     private final Duration connectTimeout;
     private final Duration httpTimeout;
     private final String transactionsPath;
+    private final String transactionsDryRunPath;
+    private final String sdkInfoPath;
     private final String walletsPath;
     private final String walletsBatchPath;
     private final String useCasesPath;
@@ -46,6 +48,8 @@ public final class LedgerClientConfig {
         this.connectTimeout = b.connectTimeout == null ? Duration.ofSeconds(5) : b.connectTimeout;
         this.httpTimeout = b.httpTimeout == null ? Duration.ofSeconds(30) : b.httpTimeout;
         this.transactionsPath = b.transactionsPath;
+        this.transactionsDryRunPath = b.transactionsDryRunPath;
+        this.sdkInfoPath = b.sdkInfoPath;
         this.walletsPath = b.walletsPath;
         this.walletsBatchPath = b.walletsBatchPath;
         this.useCasesPath = b.useCasesPath;
@@ -71,6 +75,8 @@ public final class LedgerClientConfig {
     public Duration getConnectTimeout() { return connectTimeout; }
     public Duration getHttpTimeout() { return httpTimeout; }
     public String getTransactionsPath() { return transactionsPath; }
+    public String getTransactionsDryRunPath() { return transactionsDryRunPath; }
+    public String getSdkInfoPath() { return sdkInfoPath; }
     public String getWalletsPath() { return walletsPath; }
     public String getWalletsBatchPath() { return walletsBatchPath; }
     public String getUseCasesPath() { return useCasesPath; }
@@ -104,6 +110,8 @@ public final class LedgerClientConfig {
         private Duration connectTimeout = Duration.ofSeconds(5);
         private Duration httpTimeout = Duration.ofSeconds(30);
         private String transactionsPath = "/integrations/webhooks/transactions";
+        private String transactionsDryRunPath = "/integrations/webhooks/transactions/dry-run";
+        private String sdkInfoPath = "/integrations/sdk-info";
         private String walletsPath = "/wallets";
         private String walletsBatchPath = "/wallets/batch";
         private String useCasesPath = "/integrations/use-cases";
@@ -124,6 +132,8 @@ public final class LedgerClientConfig {
         public Builder connectTimeout(Duration connectTimeout) { this.connectTimeout = connectTimeout; return this; }
         public Builder httpTimeout(Duration httpTimeout) { this.httpTimeout = httpTimeout; return this; }
         public Builder transactionsPath(String transactionsPath) { this.transactionsPath = transactionsPath; return this; }
+        public Builder transactionsDryRunPath(String transactionsDryRunPath) { this.transactionsDryRunPath = transactionsDryRunPath; return this; }
+        public Builder sdkInfoPath(String sdkInfoPath) { this.sdkInfoPath = sdkInfoPath; return this; }
         public Builder walletsPath(String walletsPath) { this.walletsPath = walletsPath; return this; }
         public Builder walletsBatchPath(String walletsBatchPath) { this.walletsBatchPath = walletsBatchPath; return this; }
         public Builder useCasesPath(String useCasesPath) { this.useCasesPath = useCasesPath; return this; }

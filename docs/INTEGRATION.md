@@ -23,10 +23,10 @@ The SDK is delivered as a **versioned JAR by email** after contract (see [DELIVE
 
 ```bash
 mvn install:install-file \
-  -Dfile=ledger-engine-sdk-1.1.0.jar \
+  -Dfile=ledger-engine-sdk-1.2.0.jar \
   -DgroupId=com.altech \
   -DartifactId=ledger-engine-sdk \
-  -Dversion=1.1.0 \
+  -Dversion=1.2.0 \
   -Dpackaging=jar
 ```
 
@@ -34,7 +34,7 @@ mvn install:install-file \
 <dependency>
   <groupId>com.altech</groupId>
   <artifactId>ledger-engine-sdk</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 </dependency>
 
 <!-- Required if not already on the classpath -->
@@ -65,9 +65,9 @@ mvn install:install-file \
 <dependency>
   <groupId>com.altech</groupId>
   <artifactId>ledger-engine-sdk</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <scope>system</scope>
-  <systemPath>${project.basedir}/lib/ledger-engine-sdk-1.1.0.jar</systemPath>
+  <systemPath>${project.basedir}/lib/ledger-engine-sdk-1.2.0.jar</systemPath>
 </dependency>
 ```
 
@@ -241,7 +241,7 @@ Full table and engine JSON shape: [ERRORS.md](ERRORS.md).
 Fat jar classifier `cli` (only if included in your package):
 
 ```bash
-java -jar ledger-engine-sdk-1.1.0-cli.jar \
+java -jar ledger-engine-sdk-1.2.0-cli.jar \
   --base-url https://ledger.example.internal \
   --file ./events.ndjson \
   --delivery REST \

@@ -42,6 +42,11 @@ public final class EventApi {
         return rest.ingestTransaction(event);
     }
 
+    /** Dry-run: Brain match + points, no books. */
+    public IngestionResult submitDryRun(TransactionalEvent event) {
+        return rest.ingestTransactionDryRun(event);
+    }
+
     /**
      * Submit on the given channel. Prefer {@link #submitRest} / {@link #submitKafka}
      * when you need a typed return value.
