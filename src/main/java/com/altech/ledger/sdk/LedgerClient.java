@@ -2,6 +2,7 @@ package com.altech.ledger.sdk;
 
 import com.altech.ledger.sdk.api.EventApi;
 import com.altech.ledger.sdk.api.FileApi;
+import com.altech.ledger.sdk.api.UseCaseApi;
 import com.altech.ledger.sdk.api.WalletApi;
 import com.altech.ledger.sdk.batch.BatchOptions;
 import com.altech.ledger.sdk.batch.BatchResult;
@@ -34,6 +35,7 @@ public final class LedgerClient implements AutoCloseable {
     private final Executor asyncExecutor;
     private final WalletApi wallets;
     private final EventApi events;
+    private final UseCaseApi useCases;
     private final FileApi files;
     private KafkaLedgerClient kafka;
     private FileLedgerClient file;
@@ -44,6 +46,7 @@ public final class LedgerClient implements AutoCloseable {
         this.asyncExecutor = ForkJoinPool.commonPool();
         this.wallets = new WalletApi(rest, asyncExecutor);
         this.events = new EventApi(rest, this::kafka, asyncExecutor);
+        this.useCases = new UseCaseApi(events);
         this.files = new FileApi(rest, this::kafka);
     }
 
@@ -80,6 +83,13 @@ public final class LedgerClient implements AutoCloseable {
     /** Phase 2 — transactional events (REST / Kafka). */
     public EventApi events() {
         return events;
+    }
+
+    /**
+     * Product use-cases (like FB page, CC spend, purchase). Prefer over raw {@link #events()}.
+     */
+    public UseCaseApi useCases() {
+        return useCases;
     }
 
     /** Phase 3 — streaming file ingest. */
