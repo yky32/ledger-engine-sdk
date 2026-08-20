@@ -1,3 +1,18 @@
+## 1.2.0
+
+### Added
+- `client.catalog()` TTL cache + `require(code)`
+- `useCases().invoke` / `invokeDryRun` (configured codes)
+- `events().submitDryRun`
+- `client.verifyEngine()` / `sdkInfo()` / `sdkVersion()` (1.2.0)
+- Richer `IngestionResult`: movementId, matchedRuleCode, dryRun, requestId
+- `ownerId` preferred on builders (userId still serializes)
+- Result envelope unwrap for engine `R.success`
+- docs: QUICKSTART_UAF, VERSIONING, ERRORS runbook
+
+### Changed
+- SDK version **1.2.0**
+
 ## Unreleased
 
 - `UseCaseApi` / `client.useCases()` — like FB, CC txn, purchase; no hand-built JSON

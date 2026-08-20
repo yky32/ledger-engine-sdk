@@ -76,7 +76,17 @@ public final class RestLedgerClient implements AutoCloseable {
     /** Phase 2 — shoot transactional event; engine applies rules and LP. */
     public IngestionResult ingestTransaction(TransactionalEvent event) {
         event.validate();
-        return post(config.getTransactionsPath(), event, IngestionResult.class, event.getEventId(), 200);
+        return postIngest(config.getTransactionsPath(), event, event.getEventId());
+    }
+
+    /** Same match + points; no wallet / movements. */
+    public IngestionResult ingestTransactionDryRun(TransactionalEvent event) {
+        event.validate();
+        return postIngest(config.getTransactionsDryRunPath(), event, event.getEventId());
+    }
+
+    public SdkInfo sdkInfo() {
+        return get(config.getSdkInfoPath(), SdkInfo.class);
     }
 
     /** Lookup wallet by owner + currency. */
@@ -105,11 +115,22 @@ public final class RestLedgerClient implements AutoCloseable {
         return request;
     }
 
+    private IngestionResult postIngest(String path, TransactionalEvent event, String idem) {
+        IngestionResult r = post(path, event, IngestionResult.class, idem, 200);
+        if (r != null && r.getRequestId() == null) {
+            r.setRequestId(lastRequestId.get());
+        }
+        return r;
+    }
+
+    private final ThreadLocal<String> lastRequestId = new ThreadLocal<>();
+
     private <T> T post(String path, Object body, Class<T> type, String idempotencyKey, int... okStatuses) {
         try {
             byte[] json = mapper.writeValueAsBytes(body);
             HttpResponse<String> response = sendWithRetry("POST", path, json, idempotencyKey);
             assertOk(response, okStatuses);
+            captureRequestId(response);
             return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
@@ -122,6 +143,7 @@ public final class RestLedgerClient implements AutoCloseable {
         try {
             HttpResponse<String> response = sendWithRetry("GET", path, null, null);
             assertOk(response, 200);
+            captureRequestId(response);
             return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
@@ -134,12 +156,20 @@ public final class RestLedgerClient implements AutoCloseable {
         try {
             HttpResponse<String> response = sendWithRetry("GET", path, null, null);
             assertOk(response, 200);
+            captureRequestId(response);
             return readBody(response.body(), type);
         } catch (LedgerException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new LedgerNetworkException("REST GET " + path + " failed: " + ex.getMessage(), ex);
         }
+    }
+
+    private void captureRequestId(HttpResponse<String> response) {
+        String rid = response.headers().firstValue("X-Request-Id")
+            .or(() -> response.headers().firstValue("X-Request-ID"))
+            .orElse(null);
+        lastRequestId.set(rid);
     }
 
     /** Supports engine {@code Result} envelope {@code {code,data}} or bare JSON. */

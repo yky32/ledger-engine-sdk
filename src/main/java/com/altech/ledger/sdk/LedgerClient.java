@@ -11,6 +11,7 @@ import com.altech.ledger.sdk.file.FileLedgerClient;
 import com.altech.ledger.sdk.kafka.KafkaLedgerClient;
 import com.altech.ledger.sdk.kafka.PublishResult;
 import com.altech.ledger.sdk.model.*;
+import com.altech.ledger.sdk.model.SdkInfo;
 import com.altech.ledger.sdk.rest.RestLedgerClient;
 
 import java.nio.file.Path;
@@ -98,6 +99,34 @@ public final class LedgerClient implements AutoCloseable {
     /** Discover ops-configured transaction / COA use cases. */
     public CatalogApi catalog() {
         return catalog;
+    }
+
+    /** This JAR version. */
+    public String sdkVersion() {
+        return SdkVersions.VERSION;
+    }
+
+    /** Engine handshake (version + features). */
+    public SdkInfo sdkInfo() {
+        return rest.sdkInfo();
+    }
+
+    /**
+     * Fail-fast compatibility check. Call once at xapi startup.
+     * @throws LedgerValidationException if engine minSdk &gt; this JAR or engine unreachable mapped errors
+     */
+    public SdkInfo verifyEngine() {
+        SdkInfo info = rest.sdkInfo();
+        if (info != null && info.getMinSdkVersion() != null && !info.getMinSdkVersion().isBlank()) {
+            Version mine = Version.parse(SdkVersions.VERSION);
+            Version min = Version.parse(info.getMinSdkVersion());
+            if (!mine.isAtLeast(min)) {
+                throw new LedgerValidationException(
+                    "SDK " + SdkVersions.VERSION + " is below engine minSdkVersion "
+                        + info.getMinSdkVersion() + " (engine " + info.getEngineVersion() + ")");
+            }
+        }
+        return info;
     }
 
     /** Phase 3 — streaming file ingest. */

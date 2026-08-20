@@ -34,23 +34,17 @@ public final class UseCaseApi {
     /**
      * Invoke a use case <b>code from the catalog</b> (ops-configured eventType / COA key).
      * Amount null → 0 (engagement / FIXED rules).
+     * {@code eventId} is the business idempotency key (also sent as Idempotency-Key).
      */
     public IngestionResult invoke(String useCaseCode, String ownerId, String eventId,
                                   BigDecimal amount, String currency, Map<String, String> metadata) {
-        String code = require(useCaseCode, "useCaseCode");
-        Map<String, String> md = metadata == null ? new HashMap<>() : new HashMap<>(metadata);
-        md.put("useCase", code);
-        BigDecimal amt = amount == null ? BigDecimal.ZERO : amount;
-        String ccy = currency == null || currency.isBlank() ? "HKD" : currency;
-        return events.submit(TransactionalEvent.builder()
-            .eventId(require(eventId, "eventId"))
-            .userId(require(ownerId, "ownerId"))
-            .eventType(code)
-            .amount(amt)
-            .currency(requireCcy(ccy))
-            .occurredAt(Instant.now())
-            .metadata(md)
-            .build());
+        return submitBuilt(buildEvent(useCaseCode, ownerId, eventId, amount, currency, metadata), false);
+    }
+
+    /** Dry-run invoke — no books / movements. */
+    public IngestionResult invokeDryRun(String useCaseCode, String ownerId, String eventId,
+                                        BigDecimal amount, String currency, Map<String, String> metadata) {
+        return submitBuilt(buildEvent(useCaseCode, ownerId, eventId, amount, currency, metadata), true);
     }
 
     /**
@@ -58,6 +52,17 @@ public final class UseCaseApi {
      */
     public IngestionResult invoke(UseCaseDescriptor useCase, String ownerId, String eventId,
                                   BigDecimal amount, String spendCurrency, Map<String, String> metadata) {
+        return invoke(useCase, ownerId, eventId, amount, spendCurrency, metadata, false);
+    }
+
+    public IngestionResult invokeDryRun(UseCaseDescriptor useCase, String ownerId, String eventId,
+                                        BigDecimal amount, String spendCurrency, Map<String, String> metadata) {
+        return invoke(useCase, ownerId, eventId, amount, spendCurrency, metadata, true);
+    }
+
+    private IngestionResult invoke(UseCaseDescriptor useCase, String ownerId, String eventId,
+                                   BigDecimal amount, String spendCurrency, Map<String, String> metadata,
+                                   boolean dryRun) {
         Objects.requireNonNull(useCase, "useCase");
         if (useCase.isSpendAmountRequired() && (amount == null || amount.signum() <= 0)) {
             throw new LedgerValidationException(
@@ -67,7 +72,30 @@ public final class UseCaseApi {
         if (ccy == null || ccy.isBlank()) {
             ccy = useCase.getCoaCurrency() != null ? useCase.getCoaCurrency() : "HKD";
         }
-        return invoke(useCase.getCode(), ownerId, eventId, amount, ccy, metadata);
+        TransactionalEvent e = buildEvent(useCase.getCode(), ownerId, eventId, amount, ccy, metadata);
+        return submitBuilt(e, dryRun);
+    }
+
+    private IngestionResult submitBuilt(TransactionalEvent e, boolean dryRun) {
+        return dryRun ? events.submitDryRun(e) : events.submit(e);
+    }
+
+    private TransactionalEvent buildEvent(String useCaseCode, String ownerId, String eventId,
+                                          BigDecimal amount, String currency, Map<String, String> metadata) {
+        String code = require(useCaseCode, "useCaseCode");
+        Map<String, String> md = metadata == null ? new HashMap<>() : new HashMap<>(metadata);
+        md.put("useCase", code);
+        BigDecimal amt = amount == null ? BigDecimal.ZERO : amount;
+        String ccy = currency == null || currency.isBlank() ? "HKD" : currency;
+        return TransactionalEvent.builder()
+            .eventId(require(eventId, "eventId"))
+            .ownerId(require(ownerId, "ownerId"))
+            .eventType(code)
+            .amount(amt)
+            .currency(requireCcy(ccy))
+            .occurredAt(Instant.now())
+            .metadata(md)
+            .build();
     }
 
     /**
@@ -117,7 +145,7 @@ public final class UseCaseApi {
         }
         return events.submit(TransactionalEvent.builder()
             .eventId(require(eventId, "eventId"))
-            .userId(require(ownerId, "ownerId"))
+            .ownerId(require(ownerId, "ownerId"))
             .eventType(EventTypes.CC_TXN_LP)
             .amount(requireAmount(spendAmount))
             .currency(requireCcy(spendCurrency))
@@ -136,7 +164,7 @@ public final class UseCaseApi {
         }
         return events.submit(TransactionalEvent.builder()
             .eventId(require(eventId, "eventId"))
-            .userId(require(ownerId, "ownerId"))
+            .ownerId(require(ownerId, "ownerId"))
             .eventType(EventTypes.PURCHASE)
             .amount(requireAmount(amount))
             .currency(requireCcy(currency))
@@ -158,7 +186,7 @@ public final class UseCaseApi {
         md.putIfAbsent("useCase", eventType);
         return events.submit(TransactionalEvent.builder()
             .eventId(require(eventId, "eventId"))
-            .userId(require(ownerId, "ownerId"))
+            .ownerId(require(ownerId, "ownerId"))
             .eventType(require(eventType, "eventType"))
             .amount(amount == null ? BigDecimal.ZERO : amount)
             .currency(requireCcy(currency == null ? "HKD" : currency))
@@ -171,7 +199,7 @@ public final class UseCaseApi {
                                                  Map<String, String> md) {
         return TransactionalEvent.builder()
             .eventId(require(eventId, "eventId"))
-            .userId(require(ownerId, "ownerId"))
+            .ownerId(require(ownerId, "ownerId"))
             .eventType(type)
             .amount(BigDecimal.ZERO)
             .currency("HKD")

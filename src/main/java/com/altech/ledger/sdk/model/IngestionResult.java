@@ -3,6 +3,7 @@ package com.altech.ledger.sdk.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -19,6 +20,13 @@ public final class IngestionResult {
     private BigDecimal points;
     private UUID transactionId;
     private String walletExternalReference;
+    private Long movementId;
+    private String matchedRuleCode;
+    private Boolean dryRun;
+    private List<?> eligibilityTrace;
+    private List<?> legs;
+    /** Correlation id from X-Request-Id (set by SDK). */
+    private String requestId;
 
     public IngestionResult() {}
 
@@ -38,15 +46,32 @@ public final class IngestionResult {
     public void setWalletExternalReference(String walletExternalReference) {
         this.walletExternalReference = walletExternalReference;
     }
+    public Long getMovementId() { return movementId; }
+    public void setMovementId(Long movementId) { this.movementId = movementId; }
+    public String getMatchedRuleCode() { return matchedRuleCode; }
+    public void setMatchedRuleCode(String matchedRuleCode) { this.matchedRuleCode = matchedRuleCode; }
+    public Boolean getDryRun() { return dryRun; }
+    public void setDryRun(Boolean dryRun) { this.dryRun = dryRun; }
+    public List<?> getEligibilityTrace() { return eligibilityTrace; }
+    public void setEligibilityTrace(List<?> eligibilityTrace) { this.eligibilityTrace = eligibilityTrace; }
+    public List<?> getLegs() { return legs; }
+    public void setLegs(List<?> legs) { this.legs = legs; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 
     public boolean isApplied() {
         return status == Status.EARNED || status == Status.BURNED || status == Status.PROCESSED;
+    }
+
+    public boolean isDryRun() {
+        return Boolean.TRUE.equals(dryRun);
     }
 
     @Override
     public String toString() {
         return "IngestionResult{eventId='" + eventId + "', status=" + status
             + ", operation='" + operation + "', points=" + points
-            + ", reason='" + reason + "', wallet=" + walletExternalReference + "}";
+            + ", movementId=" + movementId + ", matchedRule=" + matchedRuleCode
+            + ", dryRun=" + dryRun + ", requestId=" + requestId + "}";
     }
 }

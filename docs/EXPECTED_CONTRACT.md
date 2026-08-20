@@ -5,6 +5,13 @@ Call **ledger-engine-sdk** methods; SDK fills the wire body.
 
 ---
 
+## 0. Startup
+
+```java
+client.verifyEngine();
+client.catalog().cacheTtl(Duration.ofMinutes(5));
+```
+
 ## 1. Who owns what
 
 | Layer | Responsibility |

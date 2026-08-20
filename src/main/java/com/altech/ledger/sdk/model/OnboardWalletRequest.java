@@ -60,6 +60,8 @@ public final class OnboardWalletRequest {
         private String externalType;
 
         public Builder userId(String userId) { this.userId = userId; return this; }
+        /** Preferred name — same as userId (CRM / wallet ownerId). */
+        public Builder ownerId(String ownerId) { this.userId = ownerId; return this; }
         public Builder currency(String currency) { this.currency = currency; return this; }
         public Builder name(String name) { this.name = name; return this; }
         public Builder externalId(String externalId) { this.externalId = externalId; return this; }
