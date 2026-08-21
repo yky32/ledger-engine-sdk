@@ -1,3 +1,8 @@
+## Unreleased
+
+- **Breaking preference:** `forUafinance` deprecated → `forLoyalty` / `forIntegration(baseUrl, externalType)`
+- Docs: generic integrator quickstart (`QUICKSTART.md`); UAF is one example client only
+
 ## 1.2.0
 
 ### Added

@@ -10,13 +10,13 @@ import java.util.Objects;
 /**
  * Configuration for {@link LedgerClient}.
  * <p>
- * UAfinance typical setup:
+ * Typical integrator setup:
  * <pre>
  * LedgerClientConfig.builder()
- *     .baseUrl("https://ledger.uafinance.internal")
- *     .bearerToken(System.getenv("LEDGER_TOKEN"))  // if engine requires auth
- *     .defaultExternalType("uafinance")
+ *     .baseUrl("https://ledger.example.internal")
+ *     .bearerToken(System.getenv("LEDGER_TOKEN"))
  *     .defaultCurrency("LP")
+ *     .defaultExternalType("partner-code")  // optional; your system id on onboard
  *     .build();
  * </pre>
  */
@@ -144,7 +144,7 @@ public final class LedgerClientConfig {
         public Builder kafkaProperty(String key, String value) { this.kafkaExtra.put(key, value); return this; }
         public Builder defaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; return this; }
 
-        /** Applied to wallet onboard when request does not set externalType (e.g. {@code "uafinance"}). */
+        /** Applied to wallet onboard when request does not set externalType (your integration / partner id). */
         public Builder defaultExternalType(String defaultExternalType) {
             this.defaultExternalType = defaultExternalType; return this;
         }

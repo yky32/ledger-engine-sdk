@@ -27,7 +27,7 @@ client.catalog().cacheTtl(Duration.ofMinutes(5));
 
 ### 2a. Discover what ops configured (recommended for xapi)
 
-UAF operators set Brain rules + COA in LedgeRX Admin. Upstream **pulls the catalog** then fills `code`:
+Operators set Brain rules + COA in LedgeRX Admin. Upstream **pulls the catalog** then fills `code`:
 
 ```java
 // Cache periodically (e.g. every 5 min) or on startup
@@ -52,7 +52,7 @@ client.useCases().invoke(cc, ownerId, txnId, spendAmount, "HKD", Map.of("mcc", m
 
 
 ```java
-try (LedgerClient client = LedgerClient.forUafinance("https://ledger.internal")) {
+try (LedgerClient client = LedgerClient.forLoyalty("https://ledger.internal")) {
 
     // optional CRM onboard — or Door auto-wallet
     client.wallets().onboard(OnboardWalletRequest.builder()
