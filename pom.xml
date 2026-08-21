@@ -10,7 +10,7 @@
     <name>ledger-engine-sdk</name>
     <description>
         Client SDK for Ledger Engine: shared agreement objects, REST, Kafka, and file-based ingestion.
-        First product client: UAfinance. Integrate via Maven dependency or runnable CLI JAR (classifier cli).
+        Integrate via Maven dependency or runnable CLI JAR (classifier cli).
     </description>
     <url>https://github.com/yky32/ledger-engine-sdk</url>
 

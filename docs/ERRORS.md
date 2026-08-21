@@ -108,7 +108,7 @@ if (batch.hasFailures()) {
 ```
 
 
-## UAF / LedgeRX runbook (ingest)
+## LedgeRX ingest runbook
 
 | Symptom / code | Cause | Action |
 |----------------|--------|--------|

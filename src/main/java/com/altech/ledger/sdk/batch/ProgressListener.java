@@ -1,7 +1,7 @@
 package com.altech.ledger.sdk.batch;
 
 /**
- * Callback for long-running batch / file ingest (e.g. UAfinance 70K).
+ * Callback for long-running batch / file ingest.
  * Implementations must be fast and non-blocking.
  */
 @FunctionalInterface

@@ -21,15 +21,16 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 /**
- * Facade for product clients (first client: UAfinance).
+ * Facade for product integrators (any upstream: bank, fintech, xapi, …).
  * <p>
- * Preferred resource API (Phase B):
+ * Preferred resource API:
  * <pre>
+ * client.verifyEngine();
+ * client.catalog().listUseCasesCached();
+ * client.useCases().invoke(...);
  * client.wallets().onboard(...);
- * client.events().submit(event);
- * client.files().process(path, DeliveryChannel.REST, BatchOptions.continueOnError());
  * </pre>
- * Channels still available via {@link #rest()}, {@link #kafka()}, {@link #file()}.
+ * Channels: {@link #rest()}, {@link #kafka()}, {@link #file()}.
  */
 public final class LedgerClient implements AutoCloseable {
     private final LedgerClientConfig config;
@@ -58,19 +59,40 @@ public final class LedgerClient implements AutoCloseable {
         return new LedgerClient(config);
     }
 
+    /**
+     * Default loyalty-oriented client: base URL only, default currency {@code LP}.
+     * Does <b>not</b> pin any single tenant name — set {@code defaultExternalType} if you need it.
+     */
     public static LedgerClient create(String baseUrl) {
         return create(LedgerClientConfig.builder().baseUrl(baseUrl).build());
     }
 
     /**
-     * UAfinance-oriented defaults: currency LP, externalType {@code uafinance}.
+     * Loyalty defaults: currency {@code LP}. Pass your integration id as {@code externalType}
+     * (e.g. partner code) for wallet onboard metadata — optional.
      */
-    public static LedgerClient forUafinance(String baseUrl) {
-        return create(LedgerClientConfig.builder()
+    public static LedgerClient forIntegration(String baseUrl, String externalType) {
+        LedgerClientConfig.Builder b = LedgerClientConfig.builder()
             .baseUrl(baseUrl)
-            .defaultCurrency("LP")
-            .defaultExternalType("uafinance")
-            .build());
+            .defaultCurrency("LP");
+        if (externalType != null && !externalType.isBlank()) {
+            b.defaultExternalType(externalType.trim());
+        }
+        return create(b.build());
+    }
+
+    /** Same as {@link #forIntegration(String, String)} with no externalType. */
+    public static LedgerClient forLoyalty(String baseUrl) {
+        return forIntegration(baseUrl, null);
+    }
+
+    /**
+     * @deprecated UAF is one client only — use {@link #forIntegration(String, String)}
+     *             or {@link #forLoyalty(String)} / {@link #create(LedgerClientConfig)}.
+     */
+    @Deprecated
+    public static LedgerClient forUafinance(String baseUrl) {
+        return forIntegration(baseUrl, "uafinance");
     }
 
     public LedgerClientConfig config() {

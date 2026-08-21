@@ -32,7 +32,7 @@ public final class FileIngestCli {
         String delivery = "REST";
         String kafkaBootstrap = envOr("KAFKA_BOOTSTRAP", null);
         String kafkaTopic = envOr("KAFKA_TOPIC", "ledger.transaction.events");
-        String externalType = envOr("LEDGER_EXTERNAL_TYPE", "uafinance");
+        String externalType = envOr("LEDGER_EXTERNAL_TYPE", "");
         boolean continueOnError = false;
         int progressEvery = 100;
 
@@ -113,7 +113,7 @@ public final class FileIngestCli {
               --progress-every N       Log progress every N items (default 100)
               --token TOKEN            Bearer token (or LEDGER_TOKEN)
               --api-key KEY            API key header (or LEDGER_API_KEY)
-              --external-type TYPE     Default uafinance
+              --external-type TYPE     Optional partner/system id
               --kafka-bootstrap HOSTS  Required for KAFKA delivery
               --kafka-topic TOPIC      Default ledger.transaction.events
             """);

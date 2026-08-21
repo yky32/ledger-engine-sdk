@@ -35,7 +35,7 @@ Engine without `/integrations/sdk-info` → `verifyEngine()` fails network/404 �
 
 1. Tag `v1.2.0`  
 2. `mvn clean package` → thin JAR + SHA256  
-3. Email client + [QUICKSTART_UAF.md](QUICKSTART_UAF.md)  
+3. Email client + [QUICKSTART.md](QUICKSTART.md)  
 4. CHANGELOG entry  
 
 ## Idempotency & retries

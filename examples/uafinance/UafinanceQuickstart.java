@@ -21,7 +21,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 
 /**
- * Reference snippet for UAfinance integration (copy into your service).
+ * Example: one client (UAfinance). Prefer LedgerClient.forIntegration(baseUrl, "uafinance") or forLoyalty (copy into your service).
  * Not compiled as part of the SDK module — documentation only.
  *
  * <pre>
@@ -43,7 +43,7 @@ public final class UafinanceQuickstart {
             .baseUrl(baseUrl)
             .bearerToken(token)
             .defaultCurrency("LP")
-            .defaultExternalType("uafinance")
+            .defaultExternalType("uafinance") // this client's id only
             .build())) {
 
             String userId = "UAF-10001";

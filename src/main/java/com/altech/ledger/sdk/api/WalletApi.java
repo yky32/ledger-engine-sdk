@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Resource API — Phase 1 wallets (UAfinance: 1 customer = 1 LP wallet).
+ * Resource API — Phase 1 wallets (typical loyalty: 1 ownerId → 1 wallet + multi-ccy books).
  * <pre>
  * client.wallets().onboard(...);
  * client.wallets().get(userId, "LP");
