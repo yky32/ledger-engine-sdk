@@ -159,11 +159,13 @@ import java.time.Instant;
 
 var event = TransactionalEvent.builder()
     .eventId("order-20260806-001")   // stable id → also REST Idempotency-Key
-    .userId("CUST-10001")
-    .eventType("PURCHASE")           // mapped by engine rules
+    .ownerId("01A81267065")          // CRM CUST — 1 ownerId : 1 wallet
+    .mainAccount("90891234567")      // optional; omit → engine allocates account.main_account
+    .eventType("PURCHASE")           // mapped by engine rules / COA
     .amount(new BigDecimal("150.00"))
-    .currency("LP")
+    .currency("HKD")
     .occurredAt(Instant.now())
+    .metadata(Map.of("mcc", "101", "channel", "UAF_CC"))
     .build();
 
 // REST (sync result)
